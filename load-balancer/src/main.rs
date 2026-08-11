@@ -1,4 +1,4 @@
-use std::io::Read;
+use std::io::{Read, Write};
 
 // Importa os componentes de rede 
 use std::net::{TcpListener, TcpStream};
@@ -20,6 +20,19 @@ fn processa_clinte(mut stream: TcpStream){
 
             println!("---- Nova Requisição ----");
             println!("{}", requisicao);
+
+            // Monta a string da resposta HTTP
+            let status_line = "HTTP/1.1 200 OK\r\n";
+            let blank_line = "\r\n";
+            let body = "<html><body><h1>Load Balancer rodando nessa quack...</h1></body></html";
+
+            // Junta tudo
+            let resposta = format!("{}{}{}", status_line, blank_line, body);
+
+            // Escreve a resposta no socket
+            if let Err(e) = stream.write_all(resposta.as_bytes()){
+                println!("Erro ao enviar a resposta: {}", e);
+            }
         }
         Err(e) => {
             println!("Erro ao ler do socket: {}", e);
