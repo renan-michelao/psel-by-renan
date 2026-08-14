@@ -26,3 +26,20 @@ Um pacote HTTP é estruturalmente apenas um bloco de texto padronizado. É divid
 *Body:* O conteúdo do pacote, usado quando fazemos requisições POST para enviar um arquivo.
 
 OBS: A sequência de caracteres *\r\n\r\n* indica que o cabeçalho acabou.
+
+
+# Journey 2: Iniciando o backend
+
+Comecei a fazer o backend que será o servidor de arquivos. Por enquanto, o backend está extremamente simples, apenas retorna
+um HTML simples de teste. 
+
+Bom, até o momento deste commit, o que eu tenho é um esqueleto de um load balancer (ainda não é um load balancer e nem funciona como tal, mas chegaremos lá)
+rodando na porta 8080, onde recebe uma requisição e a repassa para o backend, que está rodando na porta 8081. O backend confirma que recebeu a requisição e 
+retorna um HTML para o socket, devolvendo a resposta para o load balancer, e o load balancer devolve a resposta para o cliente (é possível ver a resposta
+no navegador).
+
+Eu tive um problema para conectar o load balancer com o backend, e depois de um tempo analisando o código e pensando no que estava errado, eu desisti de procurar
+e apelei para a IA. E pasmem, era apenas dois erros simples: um erro de sintaxe (ainda não estou habituado com o Rust) e o outro era que eu estava usando a 
+variável errada (falta de atenção que me custou pelo menos 15 minutos).
+
+Também tive dificuldade com a sintaxe que usei para ler a resposta do backend, onde 'let bytes_resposta' = match... Esse operador de controle de fluxo é muito bom, mas ainda não me acostumei muito com ele hahaha. Tive que escrever e reescrever esse bloco de código algumas vezes até conseguir fazer funcionar e compreender como ele funciona.
