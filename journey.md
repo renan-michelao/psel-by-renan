@@ -46,7 +46,7 @@ Fiz algumas melhorias no backend:
 
 + "extrai_caminho_arquivo": É uma função que pega a primeira linha da requisição e a divide em duas partes. A primeira parte é o método, onde extraimos o método usado na requisição (como a requisição está sempre pedindo um arquivo, o método será sempre GET). A segunda parte é o caminho efetivo do arquivo.
 
-+ "backend_cabuloso": Essa função é responsável por manipular o arquivo que foi requisitado, ou seja, a função vai tentar abrir o arquivo. Caso o arquivo seja encontrado, a função vai escrever todo o conteúdo do arquivo de volta para socket, ou seja, vai mandar o conteúdo do arquivo de volta para o cliente.
-> Preciso dar um nome melhor para essa variável 
++ "backend_cabuloso": Essa função é responsável por manipular o arquivo que foi requisitado, ou seja, a função vai tentar abrir o arquivo. Caso o arquivo seja encontrado, a função vai escrever todo o conteúdo do arquivo de volta para socket, ou seja, vai mandar o conteúdo do arquivo de volta para o cliente. 
+> Preciso dar um nome melhor para essa função 
 
 Well, acho que por enquanto é isso. Ainda não temos um Load Balancer de fato, é apenas um proxy reverso (por enquanto), vamos chegar lá.
