@@ -49,4 +49,6 @@ Fiz algumas melhorias no backend:
 + "backend_cabuloso": Essa função é responsável por manipular o arquivo que foi requisitado, ou seja, a função vai tentar abrir o arquivo. Caso o arquivo seja encontrado, a função vai escrever todo o conteúdo do arquivo de volta para socket, ou seja, vai mandar o conteúdo do arquivo de volta para o cliente. 
 > Preciso dar um nome melhor para essa função 
 
+Tenho dois arquivos para testes: Ao rodar 127.0.0.1:8080 (caminho padrão), vai ser retornado o arquivo "index.html". No caminho 127.0.0.1:8080/imagem.jpg, é retornado a logo do patos (que por algum motivo desconhecido aparece cortada no navegador).
+
 Well, acho que por enquanto é isso. Ainda não temos um Load Balancer de fato, é apenas um proxy reverso (por enquanto), vamos chegar lá.
