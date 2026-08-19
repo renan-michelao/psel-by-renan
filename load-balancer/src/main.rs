@@ -3,7 +3,10 @@ use std::io::{Read, Write};
 // Importa os componentes de rede 
 use std::net::{TcpListener, TcpStream};
 
-fn processa_clinte(mut client_stream: TcpStream){
+use std::thread;
+use std::sync::{Arc, Mutex}; // componentes para lidar com memória compartilhada entre threads
+
+fn processa_clinte(mut client_stream: TcpStream, endereco_backend: String){
     // Buffer de 4k preenchido com zeros
     let mut buffer = [0; 4096];
 
@@ -16,13 +19,14 @@ fn processa_clinte(mut client_stream: TcpStream){
             }
 
             // Converte os bytes para uma string
-            let requisicao = String::from_utf8_lossy(&buffer[..bytes_lidos]);
+            //let requisicao = String::from_utf8_lossy(&buffer[..bytes_lidos]);
 
             println!("---- Nova Requisição ----");
-            println!("{}", requisicao);
+            println!("Encaminhando para o backend: {}", endereco_backend);
+            //println!("{}", requisicao);
 
             // Conecta ao servidor backend
-            let endereco_backend = "127.0.0.1:8081"; // Vou usar a porta 8081 para o backend
+            //let endereco_backend = "127.0.0.1:8081"; // Vou usar a porta 8081 para o backend
             let mut backent_stream = match TcpStream::connect(endereco_backend){
                 Ok(stream) => {
                     println!("Backend conectado");
@@ -72,6 +76,16 @@ fn processa_clinte(mut client_stream: TcpStream){
 }
 
 fn main(){
+
+    // Lista com os servidores backend
+    let lista_backends = vec![
+        String::from("127.0.0.1:8081"),
+        String::from("127.0.0.1:8082"),
+        String::from("127.0.0.1:8083"),
+    ];
+
+    let contador_round_robin = Arc::new(Mutex::new(0));
+
     // Define o endereço e a porta que o load balancer vai escutar
     let endereco = "127.0.0.1:8080";
     let listener = TcpListener::bind(endereco).expect("Erro na porta 8080");
@@ -84,7 +98,27 @@ fn main(){
             Ok(stream) => {
                 println!("Nova conexão");
 
-                processa_clinte(stream);
+                // Faz uma cópia das variáveis para jogar dentro da thread
+                let contador_clone = Arc::clone(&contador_round_robin);
+                let backends_clone = lista_backends.clone();
+
+                thread::spawn(move || {
+                    // Trava o mutex
+                    let mut indice_atual = contador_clone.lock().unwrap();
+                    let backend_escolhido = backends_clone[*indice_atual].clone();
+
+                    *indice_atual = *indice_atual + 1;
+
+                    // Se passou do tamanho da lista -> volta pra zero (round robin)
+                    if *indice_atual >= backends_clone.len(){
+                        *indice_atual = 0;
+                    }
+
+                    // Tira a trava do mutex
+                    drop(indice_atual);
+
+                    processa_clinte(stream, backend_escolhido);
+                });
             }
             Err(e) => {
                 println!("Erro ao aceitar conexão: {}", e);
