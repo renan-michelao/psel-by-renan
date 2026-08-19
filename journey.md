@@ -52,3 +52,14 @@ Fiz algumas melhorias no backend:
 Tenho dois arquivos para testes: Ao rodar 127.0.0.1:8080 (caminho padrão), vai ser retornado o arquivo "index.html". No caminho 127.0.0.1:8080/imagem.jpg, é retornado a logo do patos (que por algum motivo desconhecido aparece cortada no navegador).
 
 Well, acho que por enquanto é isso. Ainda não temos um Load Balancer de fato, é apenas um proxy reverso (por enquanto), vamos chegar lá.
+
+
+# Journey 3 - Threads e Round-Robin
+
+Fiz alterações importantes no Load Balancer. A primeira coisa é que ele deixou de ser apenas um proxy reverso e agora atua como um Load Balancer de verdade. Usei a biblioteca de Threads para poder servir os backends em pararelo, então se um usuário está usando o servidor na porta 8081 e chega outro usuário, o novo usuário é direcionado para o servidor na porta 8082 e se chega outro usuário, ele é redirecionado para o servidor na porta 8083. E para fazer este direcionamento de usuários para os servidores, eu utilizei o algoritmo Round-Robin, que basicamente faz o balanciamento de carga distribuindo as requisições de maneira sequencial e quando acaba os servidores disponíveis, ele volta o contador para zero e começa o balanciamento novamente (acho que ficou um pouco confuso essa explicação).
+
+Ex: Eu tenho uma lista com 3 servidores disponíveis, o algorítmo Round Robin usa um contador que recebe os índices da lista e direciona o primeiro usuário para o primeiro servidor da lista, o segundo usuário para o segundo servidor da lista e o terceiro usuário para o terceiro servidor da lista. Quando o contador for igual ao tamanho da lista, ou seja, quando acabar os servidores disponíveis, o contador vai reiniciar e vai começar a balancear as requisições a partir do primeiro servidor da lista novamente.
+
+Para testar esse balanceamento entre os servidores, eu criei mais dois backends que funcionam como servidores de teste, e com isso é possível ver nas suas saídas no terminal, que eles recebem uma nova requisição de acordo com o contador do Round Robin. 
+
+Para conseguir visualizar melhor, basta rodar o Load Balancer e os três servidores juntos, ao acessar o Load Balancer na porta 8080 e ficar recarregando a página, é possível ver o balanceamento acontecendo no terminal, onde a porta que está recebendo a nova requisição está mudando a cada refresh na página.
