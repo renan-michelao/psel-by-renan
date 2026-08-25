@@ -63,3 +63,5 @@ Ex: Eu tenho uma lista com 3 servidores disponíveis, o algorítmo Round Robin u
 Para testar esse balanceamento entre os servidores, eu criei mais dois backends que funcionam como servidores de teste, e com isso é possível ver nas suas saídas no terminal, que eles recebem uma nova requisição de acordo com o contador do Round Robin. 
 
 Para conseguir visualizar melhor, basta rodar o Load Balancer e os três servidores juntos, ao acessar o Load Balancer na porta 8080 e ficar recarregando a página, é possível ver o balanceamento acontecendo no terminal, onde a porta que está recebendo a nova requisição está mudando a cada refresh na página.
+
+Descobri o motivo da imagem de teste aparecer cortada no navegador: O buffer que armazena a resposta do backend tem apenas 4KB e quando o buffer enche, o resto da informação fica perdida/não chega no buffer. Para resolver isso, eu fiz um loop para encher o buffer de 4KB em 4KB e manda para o cliente. Quando o "bytes_lidos" é zero, significa que não tem mais nada para ler, ou seja, toda informação já foi passada do buffer para o cliente. Com isso a imagem não fica mais cortada.
