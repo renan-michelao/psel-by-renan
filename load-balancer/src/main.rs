@@ -46,28 +46,29 @@ fn processa_clinte(mut client_stream: TcpStream, endereco_backend: String){
 
             // Lê a resposta que o backend gerou
             let mut buffer_resposta = [0; 4096]; // Buffer para a resposta do back
-            let bytes_resposta = match backent_stream.read(&mut buffer_resposta){
-                Ok(bytes) =>{
-                    if bytes == 0{
-                        println!("Conexão do backend fechada");
-                        return;
+            
+            println!("Iniciando transferênca da resposta");
+
+            loop {
+                match backent_stream.read(&mut buffer_resposta){
+                    Ok(bytes_lidos) => {
+                        if bytes_lidos == 0{
+                            println!("transferênca concluida. Fim do arquivo");
+                            break;
+                        }
+
+                        // Se leu alguma coisa, pega exatamente esse pedaço e manda para o cliente
+                        if let Err(e) = client_stream.write_all(&buffer_resposta[..bytes_lidos]) {
+                            println!("Erro ao repassar pedaço para o cliente: {}", e);
+                            break;
+                        }
                     }
-
-                    println!("Resposta gerada (funciona pelo amor de Deus");
-
-                    bytes // retorna o valor para o 'let bytes_resposta'
+                    Err(e) => {
+                        println!("Erro ao ler pedaço do backend: {}", e);
+                        break;
+                    }
                 }
-                Err(e) => {
-                    println!("Erro ao ler resposta do backend: {}", e);
-                    return;
-                }
-            };
-
-            // Devolve a resposta do backend para o cliente
-            if let Err(e) = client_stream.write_all(&buffer_resposta[..bytes_resposta]){
-                println!("Erro ao devolver resposta para o cliente: {}", e);
             }
-
         }
         Err(e) => {
             println!("Erro ao ler do socket: {}", e);
