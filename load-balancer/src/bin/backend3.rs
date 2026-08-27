@@ -3,7 +3,7 @@ use std::net::{TcpListener, TcpStream};
 use std::fs;
 
 
-fn extrai_caminho_arquivo(requisicao: &str) -> String   {
+fn extrai_caminho_arquivo(requisicao: &str) -> (String, String)   {
     if let Some(primeira_linha) = requisicao.lines().next() {
 
         // Divide a linha em pedaços usando espaços em branco
@@ -11,24 +11,27 @@ fn extrai_caminho_arquivo(requisicao: &str) -> String   {
 
         // garante que a requisição está bem formatada (pelo menos método e caminho)
         if partes.len() >= 2 {
-            let metodo = partes[0];
+            let metodo = partes[0].to_string();
             let caminho = partes[1];
 
             println!("Método: {}", metodo);
             println!("Caminho: {}", caminho);
 
 
-            if caminho == "/" {
-                return String::from("index.html"); // retorna um arquivo padrão
+            let caminho_formatado = if caminho == "/" {
+                String::from("index.html")
             } else{
-                return caminho[1..].to_string();
-            }
+                caminho[1..].to_string()
+            };
+
+            return (metodo, caminho_formatado);
+
         }
 
     }
 
     // Retorno padrão caso a requisição esteja errada
-    String::from("404.html")
+    (String::from("GET"), String::from("404.html"))
 }
 
 fn backend_cabuloso(mut stream: TcpStream) {
@@ -38,17 +41,47 @@ fn backend_cabuloso(mut stream: TcpStream) {
         if bytes_lidos > 0{
             // Converte a requisição para um string
             let requisicao_str = String::from_utf8_lossy(&buffer[..bytes_lidos]);
-            println!("bateu no 3");
 
             // Extrai qual arquivo o navegador está pedindo
-            let nome_do_arquivo = extrai_caminho_arquivo(&requisicao_str);
+            let (metodo, nome_do_arquivo) = extrai_caminho_arquivo(&requisicao_str);
             println!("Backend vai tentar ler: {}", nome_do_arquivo);
+
+            if metodo == "POST" {
+                println!("Método POST, salvando arquivo: {}", nome_do_arquivo);
+
+                // O corpo do arquivo começa depois de dois \r\n seguidos
+                let mut inicio_arquivo = 0;
+
+                for i in 0..bytes_lidos.saturating_sub(3) {
+                    if buffer[i] == b'\r' && buffer[i+1] == b'\n' && buffer[i+2] == b'\r' && buffer[i+3] == b'\n' {
+                        inicio_arquivo = i + 4; // Pula os caracteres de quebra de linha
+                        break;
+                    }
+                }
+
+                // Pega os bytes do arquivo
+                let bytes_do_arquivo = &buffer[inicio_arquivo..bytes_lidos];
+
+                // tenta escrever no HD
+                match fs::write(&nome_do_arquivo, bytes_do_arquivo){
+                    Ok(_) => {
+                        println!("Arquivo salvo, vamooooooo");
+                        let resposta = "HTTP/1.1 201 Created\r\n\r\n<h1>Arquivo salvo</h1>";
+                        let _ = stream.write_all(resposta.as_bytes()); // manda a resposta para o cliente
+                    }
+                    Err(e) => {
+                        println!("deu merda na hora de salvar o arquivo: {}", e);
+                        let resposta = "HTTP/1.1 500 deu Internal Server Error\r\n\r\n<h1>deu red mano</h1>";
+                        let _ = stream.write_all(resposta.as_bytes());
+                    }
+                }
+            } else if metodo == "GET" {
 
             match fs::read(&nome_do_arquivo) {
                 Ok(conteudo_do_arquivo) => {
                     println!("Arquivo encontrado. manda o bglh pro load balancer");
 
-                    let cabecalho = "HTTP/1.1 200\r\n\r\n";
+                    let cabecalho = "HTTP/1.1 200 OK\r\n\r\n";
 
                     let mut resposta_completa = cabecalho.as_bytes().to_vec();
                     resposta_completa.extend(conteudo_do_arquivo);
@@ -75,12 +108,13 @@ fn backend_cabuloso(mut stream: TcpStream) {
                 }
             }
         }
+        }
     }
 }
 
 fn main() {
     let endereco = "127.0.0.1:8083";
-    let listener = TcpListener::bind(endereco).expect("Erro na porta 8081");
+    let listener = TcpListener::bind(endereco).expect("Erro na porta 8083");
     println!("Backend escutando em {}", endereco);
 
     for stream in listener.incoming() {
