@@ -64,4 +64,17 @@ Para testar esse balanceamento entre os servidores, eu criei mais dois backends 
 
 Para conseguir visualizar melhor, basta rodar o Load Balancer e os três servidores juntos, ao acessar o Load Balancer na porta 8080 e ficar recarregando a página, é possível ver o balanceamento acontecendo no terminal, onde a porta que está recebendo a nova requisição está mudando a cada refresh na página.
 
+# Método GET - funcionando
 Descobri o motivo da imagem de teste aparecer cortada no navegador: O buffer que armazena a resposta do backend tem apenas 4KB e quando o buffer enche, o resto da informação fica perdida/não chega no buffer. Para resolver isso, eu fiz um loop para encher o buffer de 4KB em 4KB e manda para o cliente. Quando o "bytes_lidos" é zero, significa que não tem mais nada para ler, ou seja, toda informação já foi passada do buffer para o cliente. Com isso a imagem não fica mais cortada.
+
+
+# Método POST
+
+Decidi implementar o método POST para salvar arquivos no servidor também. Então eu implementei uma lógica simples para separar o método GET e POST no backend usando if/else. Eu extraio o método da requisição usando a função "extrai_caminho_arquivo" e o retorno dessa função é o método e o caminho da requisição. Ai na função "backend_cabuloso" (não, ainda não mudei o nome) ele vai fazer um if para verificar se é um método POST ou GET e a partir daí vai processar a requisição de acordo com o seu respectivo método. Mas obviamente nem tudo são flores e já encontrei um problema: é basicamente o mesmo problema que eu tive no buffer para o método GET, ou seja, o buffer de resposta enche os seus 4KB e fecha a conexão e todo o resto da informação fica perdida. E pelo o que eu pesquisei, não é possível resolver este problema usando um loop simples como eu fiz no método GET. Então vou pesquisar mais para saber como resolver isso da meneira correta. 
+
+Eu dei uma olhada nesses links para fazer tudo isso até o momento (teve outro site, mas não lembro qual foi) e vi alguns vídeos no Youtube sobre como os Load Balancers funcionam. O resto fui caminhando com o auxilio da IA.
+
+fontes - POST:
+https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Reference/Methods/POST
+https://medium.com/@gabriellamedas/the-http-server-explained-c41380307917
+https://aws.amazon.com/what-is/load-balancing/
