@@ -82,6 +82,10 @@ fn backend_cabuloso(mut stream: TcpStream) {
                 let tamanho = extrai_tamanho_arquivo(&requisicao_str);
                 println!("tamanho do arquivo: {}", tamanho);
 
+                if requisicao_str.to_lowercase().contains("expect: 100-continue") {
+                    let _ = stream.write_all(b"HTTP/1.1 100 Continue\r\n\r\n");
+                }
+
                 while bytes_do_arquivo.len() < tamanho {
                     let mut buffer = [0; 4096];
 
@@ -101,12 +105,14 @@ fn backend_cabuloso(mut stream: TcpStream) {
                 match fs::write(&nome_do_arquivo, &bytes_do_arquivo){
                     Ok(_) => {
                         println!("Arquivo salvo, vamooooooo");
-                        let resposta = "HTTP/1.1 201 Created\r\n\r\n<h1>Arquivo salvo</h1>";
+                        let corpo = "<h1>Arquivo salvo</h1>";
+                        let resposta = format!("HTTP/1.1 201 Created\r\nContent-Length: {}\r\n\r\n{}", corpo.len(), corpo);
                         let _ = stream.write_all(resposta.as_bytes()); // manda a resposta para o cliente
                     }
                     Err(e) => {
                         println!("deu merda na hora de salvar o arquivo: {}", e);
-                        let resposta = "HTTP/1.1 500 deu Internal Server Error\r\n\r\n<h1>deu red mano</h1>";
+                        let corpo = "<h1>deu red mano</h1>";
+                        let resposta = format!("HTTP/1.1 500 deu Internal Server Error\r\nContent-Length: {}\r\n\r\n{}", corpo.len(), corpo);
                         let _ = stream.write_all(resposta.as_bytes());
                     }
                 }
