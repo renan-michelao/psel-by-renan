@@ -2,7 +2,6 @@ use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::fs;
 
-
 fn extrai_caminho_arquivo(requisicao: &str) -> (String, String)   {
     if let Some(primeira_linha) = requisicao.lines().next() {
 
@@ -34,6 +33,24 @@ fn extrai_caminho_arquivo(requisicao: &str) -> (String, String)   {
     (String::from("GET"), String::from("404.html"))
 }
 
+fn extrai_tamanho_arquivo(requisicao: &str) -> usize {
+    for linha in requisicao.lines() {
+        if linha.to_lowercase().starts_with("content-length") {
+            let pedacos: Vec<&str> = linha.split(":").collect();
+
+            if pedacos.len() == 2 { // caso tenha um espaço de separação entre : e o número
+                // Pega o número (ex: " 15042"), remove os espaços e converte para número (usize)
+                let numero_str = pedacos[1].trim();
+                if let Ok(tamanho) = numero_str.parse::<usize>() {
+                    return tamanho;
+                }
+            }
+        }
+    }
+
+    0   // se não achar o cabeçalho, assume que o arquivo tme 0 bytes
+}
+
 fn backend_cabuloso(mut stream: TcpStream) {
     let mut buffer = [0; 4096];
 
@@ -60,10 +77,28 @@ fn backend_cabuloso(mut stream: TcpStream) {
                 }
 
                 // Pega os bytes do arquivo
-                let bytes_do_arquivo = &buffer[inicio_arquivo..bytes_lidos];
+                let mut bytes_do_arquivo = buffer[inicio_arquivo..bytes_lidos].to_vec();
+
+                let tamanho = extrai_tamanho_arquivo(&requisicao_str);
+                println!("tamanho do arquivo: {}", tamanho);
+
+                while bytes_do_arquivo.len() < tamanho {
+                    let mut buffer = [0; 4096];
+
+                    match stream.read(&mut buffer) {
+                        Ok(lidos) => {
+                            if lidos == 0 {
+                                break;
+                            }
+
+                            bytes_do_arquivo.extend_from_slice(&buffer[..lidos]);
+                        }
+                        Err(_) => break, // erro na rede
+                    }
+                }
 
                 // tenta escrever no HD
-                match fs::write(&nome_do_arquivo, bytes_do_arquivo){
+                match fs::write(&nome_do_arquivo, &bytes_do_arquivo){
                     Ok(_) => {
                         println!("Arquivo salvo, vamooooooo");
                         let resposta = "HTTP/1.1 201 Created\r\n\r\n<h1>Arquivo salvo</h1>";
