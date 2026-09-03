@@ -6,74 +6,72 @@ use std::net::{TcpListener, TcpStream};
 use std::thread;
 use std::sync::{Arc, Mutex}; // componentes para lidar com memória compartilhada entre threads
 
-fn processa_clinte(mut client_stream: TcpStream, endereco_backend: String){
-    // Buffer de 4k preenchido com zeros
-    let mut buffer = [0; 4096];
+fn processa_clinte(client_stream: TcpStream, endereco_backend: String){
+    println!("---- Nova Conexão ----");
+    println!("Roteando para o backend: {}", endereco_backend);
 
-    // Lê os dados (requisição) do socket e coloca no buffer
-    match client_stream.read(&mut buffer){
-        Ok(bytes_lidos) => {
-            if bytes_lidos == 0 {
-                println!("Conexão fechada.");
-                return;
-            }
+    // Conecta ao servidor backend
+    let backend_stream = match TcpStream::connect(&endereco_backend) {
+        Ok(stream) => stream,
+        Err(e) => {
+            println!("Erro ao conectar no backend {}: {}", endereco_backend, e);
+            return;
+        }
+    };
 
-            // Converte os bytes para uma string
-            //let requisicao = String::from_utf8_lossy(&buffer[..bytes_lidos]);
+    // clona as conexões, permitindo leitura e escrita ao mesmo tempo de forma independente
+    let mut cliente_leitura = client_stream.try_clone().unwrap();
+    let mut cliente_escrita = client_stream.try_clone().unwrap();
+    
+    let mut backend_leitura = backend_stream.try_clone().unwrap();
+    let mut backend_escrita = backend_stream.try_clone().unwrap();
 
-            println!("---- Nova Requisição ----");
-            println!("Encaminhando para o backend: {}", endereco_backend);
-            //println!("{}", requisicao);
-
-            // Conecta ao servidor backend
-            //let endereco_backend = "127.0.0.1:8081"; // Vou usar a porta 8081 para o backend
-            let mut backent_stream = match TcpStream::connect(endereco_backend){
-                Ok(stream) => {
-                    println!("Backend conectado");
-                    stream
-                }
-                Err(e) => {
-                    println!("Erro ao conectar no backend {}", e);
-                    return;
-                }
-            };
-
-            // Repassa os bytes da requisição para o backend
-            if let Err(e) = backent_stream.write_all(&buffer[..bytes_lidos]) {
-                println!("Erro ao enviar requisição para o back: {}", e);
-                return;
-            }
-
-            // Lê a resposta que o backend gerou
-            let mut buffer_resposta = [0; 4096]; // Buffer para a resposta do back
-            
-            println!("Iniciando transferênca da resposta");
-
-            loop {
-                match backent_stream.read(&mut buffer_resposta){
-                    Ok(bytes_lidos) => {
-                        if bytes_lidos == 0{
-                            println!("transferênca concluida. Fim do arquivo");
-                            break;
-                        }
-
-                        // Se leu alguma coisa, pega exatamente esse pedaço e manda para o cliente
-                        if let Err(e) = client_stream.write_all(&buffer_resposta[..bytes_lidos]) {
-                            println!("Erro ao repassar pedaço para o cliente: {}", e);
-                            break;
-                        }
-                    }
-                    Err(e) => {
-                        println!("Erro ao ler pedaço do backend: {}", e);
+    // Rota de uploads (Cliente -> Backend)
+    // cria uma thread só para mandar os dados do cliente para o backend
+    let thread_upload = thread::spawn(move || {
+        let mut buffer_ida = [0; 4096];
+        loop {
+            match cliente_leitura.read(&mut buffer_ida) {
+                Ok(bytes_lidos) => {
+                    if bytes_lidos == 0 {
                         break;
+                    } // Cliente parou de enviar
+                    
+                    // Manda os bytes pro backend
+                    if backend_escrita.write_all(&buffer_ida[..bytes_lidos]).is_err() {
+                        break; 
                     }
                 }
+                Err(_) => {
+                    break;
+                }, // Erro na rede, quebra o loop
             }
         }
-        Err(e) => {
-            println!("Erro ao ler do socket: {}", e);
+    });
+
+    // Rota de downloads (Backend -> Cliente)
+    // Usa a thread principal para mandar os dados do backend de volta para o cliente
+    let mut buffer_volta = [0; 4096];
+    loop {
+        match backend_leitura.read(&mut buffer_volta) {
+            Ok(bytes_lidos) => {
+                if bytes_lidos == 0 { // Backend terminou de responder
+                    break;
+                } 
+                
+                // Manda os bytes pro cliente
+                if cliente_escrita.write_all(&buffer_volta[..bytes_lidos]).is_err() {
+                    break;
+                }
+            }
+            Err(_) => break,
         }
     }
+
+    // Espera o upload terminar antes de matar a função e fechar os sockets
+    let _ = thread_upload.join();
+    
+    println!("Transferência concluída");
 }
 
 fn main(){
