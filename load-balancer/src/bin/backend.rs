@@ -80,10 +80,13 @@ fn backend_cabuloso(mut stream: TcpStream) {
 
             // Extrai qual arquivo o navegador está pedindo
             let (metodo, nome_do_arquivo) = extrai_caminho_arquivo(&requisicao_str);
-            println!("Backend vai tentar ler: {}", nome_do_arquivo);
+
+            let caminho_no_disco = format!("public/{}",nome_do_arquivo);
+
+            println!("Backend vai tentar ler: {}", caminho_no_disco);
 
             if metodo == "POST" {
-                println!("Método POST, salvando arquivo: {}", nome_do_arquivo);
+                println!("Método POST, salvando arquivo: {}", caminho_no_disco);
 
                 // O corpo do arquivo começa depois de dois \r\n seguidos
                 let mut inicio_arquivo = 0;
@@ -121,7 +124,7 @@ fn backend_cabuloso(mut stream: TcpStream) {
                 }
 
                 // tenta escrever no HD
-                match fs::write(&nome_do_arquivo, &bytes_do_arquivo){
+                match fs::write(&caminho_no_disco, &bytes_do_arquivo){
                     Ok(_) => {
                         println!("Arquivo salvo, vamooooooo");
                         let corpo = "<h1>Arquivo salvo</h1>";
@@ -137,13 +140,13 @@ fn backend_cabuloso(mut stream: TcpStream) {
                 }
             } else if metodo == "GET" {
 
-            match fs::read(&nome_do_arquivo) {
+            match fs::read(&caminho_no_disco) {
                 Ok(conteudo_do_arquivo) => {
                     println!("Arquivo encontrado. manda o bglh pro load balancer");
 
                     let tamanho = conteudo_do_arquivo.len();
 
-                    let tipo = descobre_content_type(&nome_do_arquivo);
+                    let tipo = descobre_content_type(&caminho_no_disco);
 
                     let cabecalho = format!("HTTP/1.1 200 OK\r\nContent-Type: {}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", tipo, tamanho);
 
