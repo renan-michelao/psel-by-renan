@@ -91,3 +91,15 @@ https://aws.amazon.com/what-is/load-balancing/
 # Journey 4 - Content-Type
 
 Eu estava tendo um problema que nem sempre os arquivos carregavam no GET, por isso eu criei uma função para pegar o tipo do arquivo e, então esse problema foi resolvido. Todos os arquivos que eu testei, ele conseguiu retornar sem problemas. Criei essa função também para a próxima jornada.
+
+# Journey 5 - Rodar Doom
+
+Pesquisei um pouco sobre como rodar Doom na web e decidi usar a engine do JS-DOS, para emular o sistema DOS direto no navegador usando WebAssembly. Ao pedir "doom.html" no Load Balancer, ele pede os outros arquivos necessários. O JS-DOS compila o WebAssembly, descompacta o "doom.zip" e executa o "doom.exe" direto no emulador DOS rodando no navegador.
+
+Utilizei os seguintes arquivos:
+
+curl -O https://js-dos.com/6.22/current/js-dos.js
+curl -O https://js-dos.com/6.22/current/wdosbox.js
+curl -O https://js-dos.com/6.22/current/wdosbox.wasm
+curl -O https://js-dos.com/6.22/current/wdosbox.wasm.js
+curl -L -o doom.zip "https://archive.org/download/DoomsharewareEpisode/doom.ZIP"
