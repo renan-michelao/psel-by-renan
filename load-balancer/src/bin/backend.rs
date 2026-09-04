@@ -33,6 +33,7 @@ fn extrai_caminho_arquivo(requisicao: &str) -> (String, String)   {
     (String::from("GET"), String::from("404.html"))
 }
 
+
 fn extrai_tamanho_arquivo(requisicao: &str) -> usize {
     for linha in requisicao.lines() {
         if linha.to_lowercase().starts_with("content-length") {
@@ -49,6 +50,24 @@ fn extrai_tamanho_arquivo(requisicao: &str) -> usize {
     }
 
     0   // se não achar o cabeçalho, assume que o arquivo tme 0 bytes
+}
+
+fn descobre_content_type(nome_arquivo: &str) -> &str {
+    if nome_arquivo.ends_with(".html"){
+        "text/html"
+    } else if nome_arquivo.ends_with(".js") {
+        "application/javascript"
+    } else if nome_arquivo.ends_with(".wasm") {
+        "application/wasm"
+    } else if nome_arquivo.ends_with(".zip") {
+        "application/zip"
+    } else if nome_arquivo.ends_with(".png") || nome_arquivo.ends_with(".jpg") {
+        "image/jpeg"
+    } else if nome_arquivo.ends_with(".pdf") {
+        "application/pdf"
+    } else {
+        "plain/text"
+    }
 }
 
 fn backend_cabuloso(mut stream: TcpStream) {
@@ -122,7 +141,11 @@ fn backend_cabuloso(mut stream: TcpStream) {
                 Ok(conteudo_do_arquivo) => {
                     println!("Arquivo encontrado. manda o bglh pro load balancer");
 
-                    let cabecalho = "HTTP/1.1 200 OK\r\n\r\n";
+                    let tamanho = conteudo_do_arquivo.len();
+
+                    let tipo = descobre_content_type(&nome_do_arquivo);
+
+                    let cabecalho = format!("HTTP/1.1 200 OK\r\nContent-Type: {}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", tipo, tamanho);
 
                     let mut resposta_completa = cabecalho.as_bytes().to_vec();
                     resposta_completa.extend(conteudo_do_arquivo);
@@ -136,12 +159,11 @@ fn backend_cabuloso(mut stream: TcpStream) {
                 Err(_) => {
                     println!("Arquivo não encontrado. 404");
 
-                    let cabecalho = "HTTP/1.1 404 Not Found\r\n\r\n";
-
-                    let body_error = "<html><body><h1>Erro 404: o pato nao encontrou o bglh</h1></body></html>";
+                    let corpo = "<html><body><h1>Erro 404: o pato nao encontrou o bglh</h1></body></html>";
+                    let cabecalho = format!("HTTP/1.1 404 Not Found\r\nContent-Length: {}\r\n\r\n", corpo.len());
 
                     // Junta tudo
-                    let resposta_erro = format!("{}{}", cabecalho, body_error);
+                    let resposta_erro = format!("{}{}", cabecalho, corpo);
 
                     if let Err(e) = stream.write_all(resposta_erro.as_bytes()){
                         println!("Erro ao enviar erro 404: {}", e);
