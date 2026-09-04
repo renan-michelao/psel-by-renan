@@ -72,9 +72,22 @@ Descobri o motivo da imagem de teste aparecer cortada no navegador: O buffer que
 
 Decidi implementar o método POST para salvar arquivos no servidor também. Então eu implementei uma lógica simples para separar o método GET e POST no backend usando if/else. Eu extraio o método da requisição usando a função "extrai_caminho_arquivo" e o retorno dessa função é o método e o caminho da requisição. Ai na função "backend_cabuloso" (não, ainda não mudei o nome) ele vai fazer um if para verificar se é um método POST ou GET e a partir daí vai processar a requisição de acordo com o seu respectivo método. Mas obviamente nem tudo são flores e já encontrei um problema: é basicamente o mesmo problema que eu tive no buffer para o método GET, ou seja, o buffer de resposta enche os seus 4KB e fecha a conexão e todo o resto da informação fica perdida. E pelo o que eu pesquisei, não é possível resolver este problema usando um loop simples como eu fiz no método GET. Então vou pesquisar mais para saber como resolver isso da meneira correta. 
 
+# Dia 2 - Método POST
+
+Implementei uma função para extrair o tamanho do arquivo que está sendo salvo. Ela basicamente pega a requisição e procura a linha "Content-Length: ....." e retorna esse número (que é o tamanho do arquivo). Fiz isso para o POST conseguir fazer o upload do arquivo completo usando um While, ou seja, enquando ele não ler todos os bytes do arquivo que sendo salvo, ele continua lendo.
+
+Percebi que o POST não estava salvando os arquivos. Nos primeiros teste que fiz estava salvando normal, mas eu tirei algumas coisas que eu achei que não estavam influenciando em nada no código e subi pro GIT, mas o POST parou de funcionar.
+
+Como eu estou testando o UPLOAD de arquivos com o "curl", ele pede uma permissão para o POST, e como eu não fornecia essa permissão, ele não salva o arquivo. Portanto, adicionei uma condição que, caso o curl peça uma permissão, o código manda um "Continue" para o HTTP. E aparentemente os arquivos estão sendo salvos corretamentes.
+
 Eu dei uma olhada nesses links para fazer tudo isso até o momento (teve outro site, mas não lembro qual foi) e vi alguns vídeos no Youtube sobre como os Load Balancers funcionam. O resto fui caminhando com o auxilio da IA.
 
 fontes - POST:
 https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Reference/Methods/POST
 https://medium.com/@gabriellamedas/the-http-server-explained-c41380307917
 https://aws.amazon.com/what-is/load-balancing/
+
+
+# Journey 4 - Content-Type
+
+Eu estava tendo um problema que nem sempre os arquivos carregavam no GET, por isso eu criei uma função para pegar o tipo do arquivo e, então esse problema foi resolvido. Todos os arquivos que eu testei, ele conseguiu retornar sem problemas. Criei essa função também para a próxima jornada.
